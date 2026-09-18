@@ -3,9 +3,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import { WS_BASE_URL } from '@/lib/api';
-import { playAlertChime, speakVietnamese } from '@/lib/sound';
+import { playAlertChime, speakVietnamese, unlockAudio } from '@/lib/sound';
 import confetti from 'canvas-confetti';
-import { Sparkles, Trophy, Gem, Heart } from 'lucide-react';
+import { Sparkles, Trophy, Gem, Heart, Volume2 } from 'lucide-react';
 
 interface AlertItem {
   id: string;
@@ -27,6 +27,7 @@ export default function OverlayPage() {
 
   const [currentAlert, setCurrentAlert] = useState<AlertItem | null>(null);
   const [animState, setAnimState] = useState<'IN' | 'OUT' | 'IDLE'>('IDLE');
+  const [audioUnlocked, setAudioUnlocked] = useState<boolean>(false);
 
   const queueRef = useRef<AlertItem[]>([]);
   const isPlayingRef = useRef<boolean>(false);
@@ -36,9 +37,20 @@ export default function OverlayPage() {
   useEffect(() => {
     document.documentElement.classList.add('overlay-mode');
     document.body.classList.add('overlay-mode');
+
+    const handleUserInteraction = () => {
+      unlockAudio();
+      setAudioUnlocked(true);
+    };
+
+    window.addEventListener('click', handleUserInteraction);
+    window.addEventListener('keydown', handleUserInteraction);
+
     return () => {
       document.documentElement.classList.remove('overlay-mode');
       document.body.classList.remove('overlay-mode');
+      window.removeEventListener('click', handleUserInteraction);
+      window.removeEventListener('keydown', handleUserInteraction);
     };
   }, []);
 
@@ -153,21 +165,36 @@ export default function OverlayPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slug, token]);
 
-  if (!currentAlert) {
-    // Trạng thái bình thường: 100% trong suốt, không chiếm diện tích hiển thị
-    return null;
-  }
-
   // Phân màu sắc viền theo Tier
-  const tierColors = {
+  const tierMap: Record<string, string> = {
     BRONZE: 'from-amber-600/30 to-amber-900/40 border-amber-500/40 text-amber-300',
     SILVER: 'from-slate-800/80 to-indigo-950/80 border-indigo-500/50 text-indigo-300',
     GOLD: 'from-amber-500/20 via-yellow-500/30 to-amber-700/40 border-yellow-400/80 text-yellow-300',
     DIAMOND: 'from-pink-600/30 via-purple-600/40 to-cyan-500/30 border-pink-400 text-pink-300',
-  }[currentAlert.tier];
+  };
+  const tierColors = currentAlert ? (tierMap[currentAlert.tier] || tierMap.SILVER) : '';
 
   return (
-    <div className="fixed inset-0 flex items-start justify-center pt-8 pointer-events-none z-50">
+    <>
+      {/* Nút hỗ trợ mở khóa âm thanh khi test trực tiếp trên trình duyệt Chrome/Edge */}
+      {!audioUnlocked && (
+        <div className="fixed top-3 right-3 z-50 pointer-events-auto">
+          <button
+            onClick={() => {
+              unlockAudio();
+              playAlertChime(0.5);
+              setAudioUnlocked(true);
+            }}
+            className="px-3.5 py-2 bg-slate-900/90 hover:bg-slate-900 text-pink-400 border border-pink-500/50 rounded-2xl text-xs font-bold shadow-2xl backdrop-blur-xl transition flex items-center gap-2 cursor-pointer"
+          >
+            <Volume2 className="w-4 h-4 animate-bounce" />
+            <span>Click để bật âm thanh trình duyệt</span>
+          </button>
+        </div>
+      )}
+
+      {currentAlert && (
+        <div className="fixed inset-0 flex items-start justify-center pt-8 pointer-events-none z-50">
       <div
         className={`w-[480px] max-w-[90vw] rounded-3xl p-6 shadow-2xl backdrop-blur-xl border-2 transition-all bg-gradient-to-b ${tierColors} ${
           animState === 'IN' ? 'animate-alert-in glow-neon' : 'animate-alert-out'
@@ -212,12 +239,14 @@ export default function OverlayPage() {
           </div>
         )}
 
-        {/* Footer icon */}
-        <div className="flex justify-center items-center gap-1.5 mt-3 text-[11px] text-white/60">
-          <Heart className="w-3.5 h-3.5 text-pink-400 fill-pink-400" />
-          <span>Cảm ơn bạn đã tiếp lửa cho kênh!</span>
+          {/* Footer icon */}
+          <div className="flex justify-center items-center gap-1.5 mt-3 text-[11px] text-white/60">
+            <Heart className="w-3.5 h-3.5 text-pink-400 fill-pink-400" />
+            <span>Cảm ơn bạn đã tiếp lửa cho kênh!</span>
+          </div>
         </div>
       </div>
-    </div>
-  );
+    )}
+  </>
+);
 }

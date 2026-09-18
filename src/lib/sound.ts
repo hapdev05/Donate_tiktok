@@ -1,5 +1,25 @@
 import { API_BASE_URL } from '@/lib/api';
 
+export function unlockAudio() {
+  if (typeof window === 'undefined') return;
+  try {
+    const AudioContextClass =
+      window.AudioContext ||
+      (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+    if (AudioContextClass) {
+      const ctx = new AudioContextClass();
+      if (ctx.state === 'suspended') {
+        ctx.resume();
+      }
+    }
+    const dummy = new Audio();
+    dummy.src = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA';
+    dummy.play().catch(() => {});
+  } catch (e) {
+    console.error('Audio unlock error:', e);
+  }
+}
+
 /**
  * Web Audio API synthesizer để tạo âm thanh chime tinh tế, tươi vui
  */
@@ -11,6 +31,9 @@ export function playAlertChime(volume = 0.8) {
     if (!AudioContextClass) return;
 
     const ctx = new AudioContextClass();
+    if (ctx.state === 'suspended') {
+      ctx.resume();
+    }
     const now = ctx.currentTime;
 
     // Chuỗi nốt vui nhộn (C5 -> E5 -> G5 -> C6) tạo cảm giác tiền về may mắn

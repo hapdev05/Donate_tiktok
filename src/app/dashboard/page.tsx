@@ -52,8 +52,17 @@ export default function DashboardPage() {
     try {
       setIsTesting(true);
       setTestSuccessMessage(null);
+
+      // 1. Phát âm thanh chuông ting ting và giọng đọc Chị Google NGAY TẠI DASHBOARD cho streamer nghe
+      const { playAlertChime, speakVietnamese } = await import('@/lib/sound');
+      playAlertChime(0.85);
+      setTimeout(() => {
+        speakVietnamese(`${testName} vừa ủng hộ ${Number(testAmount).toLocaleString('vi-VN')} đồng. ${testMessage}`);
+      }, 500);
+
+      // 2. Bắn sang WebSocket cho trang Overlay trên TikTok LIVE Studio / OBS
       const res = await triggerTestAlert(slug, testName, Number(testAmount), testMessage);
-      setTestSuccessMessage(res.message || 'Đã bắn alert thử nghiệm thành công!');
+      setTestSuccessMessage(res.message || 'Đã bắn alert thành công!');
       setTimeout(() => setTestSuccessMessage(null), 4000);
     } catch {
       setTestSuccessMessage('Lỗi khi gửi alert thử nghiệm');
@@ -184,14 +193,31 @@ export default function DashboardPage() {
                 />
               </div>
 
-              <button
-                type="submit"
-                disabled={isTesting}
-                className="w-full py-2.5 px-4 bg-gradient-to-r from-amber-500 to-pink-500 hover:from-amber-600 hover:to-pink-600 text-white font-bold rounded-xl text-xs shadow-lg shadow-amber-500/20 transition flex items-center justify-center gap-2"
-              >
-                <Play className="w-3.5 h-3.5 fill-white" />
-                {isTesting ? 'Đang gửi...' : 'KÍCH HOẠT ALERT THỬ NGHIỆM'}
-              </button>
+              <div className="flex flex-col sm:flex-row gap-3 pt-2">
+                <button
+                  type="submit"
+                  disabled={isTesting}
+                  className="flex-1 py-3 px-4 bg-gradient-to-r from-amber-500 to-pink-500 hover:from-amber-600 hover:to-pink-600 text-white font-bold rounded-xl text-xs shadow-lg shadow-amber-500/20 transition flex items-center justify-center gap-2"
+                >
+                  <Play className="w-3.5 h-3.5 fill-white" />
+                  {isTesting ? 'Đang gửi...' : 'BẮN SANG OVERLAY TIKTOK'}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    import('@/lib/sound').then(({ playAlertChime, speakVietnamese }) => {
+                      playAlertChime(0.85);
+                      setTimeout(() => {
+                        speakVietnamese(`${testName} vừa ủng hộ ${Number(testAmount).toLocaleString('vi-VN')} đồng. ${testMessage}`);
+                      }, 500);
+                    });
+                  }}
+                  className="py-3 px-4 bg-slate-800 hover:bg-slate-700 text-pink-300 font-bold rounded-xl text-xs border border-pink-500/30 transition flex items-center justify-center gap-2"
+                >
+                  🔊 NGHE THỬ GIỌNG CHỊ GOOGLE TẠI ĐÂY
+                </button>
+              </div>
             </form>
           </div>
         </div>
