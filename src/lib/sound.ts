@@ -1,10 +1,13 @@
+import { API_BASE_URL } from '@/lib/api';
+
 /**
  * Web Audio API synthesizer để tạo âm thanh chime tinh tế, tươi vui
- * Hoàn toàn chạy bằng code, không sợ 404 lỗi file âm thanh!
  */
 export function playAlertChime(volume = 0.8) {
   try {
-    const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+    const AudioContextClass =
+      window.AudioContext ||
+      (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
     if (!AudioContextClass) return;
 
     const ctx = new AudioContextClass();
@@ -36,12 +39,12 @@ export function playAlertChime(volume = 0.8) {
   }
 }
 
-import { API_BASE_URL } from '@/lib/api';
-
 /**
- * Đọc lời nhắn bằng GIỌNG NỮ TIẾNG VIỆT CHUẨN (Chị Google)
- * Sử dụng Audio stream trực tiếp, cam kết 100% tiếng Việt chuẩn, không bao giờ bị giọng Anh đọc méo tiếng!
+ * ĐỌC DUY NHẤT 100% GIỌNG NỮ TIẾNG VIỆT (CHỊ GOOGLE)
+ * Xóa bỏ hoàn toàn giọng đọc nam và Web Speech API của hệ điều hành.
  */
+let currentAudio: HTMLAudioElement | null = null;
+
 export function speakVietnamese(text: string) {
   if (!text || typeof window === 'undefined') return;
 
@@ -49,49 +52,23 @@ export function speakVietnamese(text: string) {
     const cleanText = text.trim();
     if (!cleanText) return;
 
-    // 1. Sử dụng Audio Stream Chị Google Tiếng Việt từ Backend / Cloudflare Tunnel
+    // Dừng âm thanh trước nếu đang đọc
+    if (currentAudio) {
+      currentAudio.pause();
+      currentAudio.currentTime = 0;
+      currentAudio = null;
+    }
+
+    // Luôn luôn dùng trực tiếp Giọng Nữ Chị Google (Audio Stream chuẩn tiếng Việt 100%)
     const ttsUrl = `${API_BASE_URL}/api/v1/tts?text=${encodeURIComponent(cleanText)}`;
     const audio = new Audio(ttsUrl);
     audio.volume = 1.0;
+    currentAudio = audio;
 
-    const playPromise = audio.play();
-    if (playPromise !== undefined) {
-      playPromise.catch((err) => {
-        console.warn('Audio stream error, falling back to Web Speech API:', err);
-        // Fallback sang Web Speech API nếu trình duyệt chặn autoplay audio
-        fallbackWebSpeech(cleanText);
-      });
-    }
+    audio.play().catch((err) => {
+      console.warn('Không thể tự động phát giọng đọc (có thể do trình duyệt yêu cầu click chuột trước):', err);
+    });
   } catch (e) {
     console.error('Lỗi khi phát giọng đọc tiếng Việt:', e);
-    fallbackWebSpeech(text);
   }
 }
-
-function fallbackWebSpeech(text: string) {
-  if (typeof window === 'undefined' || !window.speechSynthesis) return;
-
-  try {
-    window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = 'vi-VN';
-    utterance.rate = 0.95;
-    utterance.pitch = 1.1; // Giọng nữ cao
-
-    const voices = window.speechSynthesis.getVoices();
-    const viVoice = voices.find(
-      (v) =>
-        (v.lang.includes('vi') || v.lang.includes('VI') || v.name.toLowerCase().includes('vietnam')) &&
-        (v.name.toLowerCase().includes('female') || !v.name.toLowerCase().includes('male'))
-    ) || voices.find((v) => v.lang.includes('vi'));
-
-    if (viVoice) {
-      utterance.voice = viVoice;
-    }
-
-    window.speechSynthesis.speak(utterance);
-  } catch (err) {
-    console.error('Web Speech fallback error:', err);
-  }
-}
-
