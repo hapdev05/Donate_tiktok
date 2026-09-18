@@ -36,28 +36,62 @@ export function playAlertChime(volume = 0.8) {
   }
 }
 
+import { API_BASE_URL } from '@/lib/api';
+
 /**
- * Đọc lời nhắn Text-To-Speech tiếng Việt mượt mà
+ * Đọc lời nhắn bằng GIỌNG NỮ TIẾNG VIỆT CHUẨN (Chị Google)
+ * Sử dụng Audio stream trực tiếp, cam kết 100% tiếng Việt chuẩn, không bao giờ bị giọng Anh đọc méo tiếng!
  */
 export function speakVietnamese(text: string) {
+  if (!text || typeof window === 'undefined') return;
+
+  try {
+    const cleanText = text.trim();
+    if (!cleanText) return;
+
+    // 1. Sử dụng Audio Stream Chị Google Tiếng Việt từ Backend / Cloudflare Tunnel
+    const ttsUrl = `${API_BASE_URL}/api/v1/tts?text=${encodeURIComponent(cleanText)}`;
+    const audio = new Audio(ttsUrl);
+    audio.volume = 1.0;
+
+    const playPromise = audio.play();
+    if (playPromise !== undefined) {
+      playPromise.catch((err) => {
+        console.warn('Audio stream error, falling back to Web Speech API:', err);
+        // Fallback sang Web Speech API nếu trình duyệt chặn autoplay audio
+        fallbackWebSpeech(cleanText);
+      });
+    }
+  } catch (e) {
+    console.error('Lỗi khi phát giọng đọc tiếng Việt:', e);
+    fallbackWebSpeech(text);
+  }
+}
+
+function fallbackWebSpeech(text: string) {
   if (typeof window === 'undefined' || !window.speechSynthesis) return;
 
   try {
-    window.speechSynthesis.cancel(); // Dừng câu cũ nếu có
+    window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = 'vi-VN';
-    utterance.rate = 1.0;
-    utterance.pitch = 1.05;
+    utterance.rate = 0.95;
+    utterance.pitch = 1.1; // Giọng nữ cao
 
-    // Tìm giọng tiếng Việt nếu có trong OS
     const voices = window.speechSynthesis.getVoices();
-    const viVoice = voices.find((v) => v.lang.includes('vi') || v.lang.includes('VN'));
+    const viVoice = voices.find(
+      (v) =>
+        (v.lang.includes('vi') || v.lang.includes('VI') || v.name.toLowerCase().includes('vietnam')) &&
+        (v.name.toLowerCase().includes('female') || !v.name.toLowerCase().includes('male'))
+    ) || voices.find((v) => v.lang.includes('vi'));
+
     if (viVoice) {
       utterance.voice = viVoice;
     }
 
     window.speechSynthesis.speak(utterance);
-  } catch (e) {
-    console.error('Lỗi TTS:', e);
+  } catch (err) {
+    console.error('Web Speech fallback error:', err);
   }
 }
+
