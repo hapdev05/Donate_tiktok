@@ -292,13 +292,13 @@ export default function HomePage() {
               </label>
               <textarea
                 rows={3}
-                maxLength={250}
+                maxLength={200}
                 placeholder="Chúc idol live vui vẻ, leo rank thành công nhé! ❤️"
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
                 className="w-full px-4 py-3 bg-slate-950/80 border border-slate-800 rounded-xl text-sm text-white placeholder-gray-500 focus:outline-none focus:border-pink-500 focus:ring-1 focus:ring-pink-500 transition resize-none"
               />
-              <div className="text-right text-[10px] text-gray-500 mt-1">{message.length}/250</div>
+              <div className="text-right text-[10px] text-gray-500 mt-1">{message.length}/200</div>
             </div>
 
             {/* Hướng dẫn không cần nhập tiền */}
