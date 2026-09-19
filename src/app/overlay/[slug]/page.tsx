@@ -75,15 +75,15 @@ export default function OverlayPage() {
       });
     }
 
-    // 3. Đọc giọng Text-To-Speech tiếng Việt
+    // 3. Đọc giọng Text-To-Speech tiếng Việt và điều chỉnh thời gian hiển thị linh hoạt
     const speechText = `${alert.displayName} vừa ủng hộ ${alert.amount.toLocaleString('vi-VN')} đồng. ${alert.message || ''}`;
-    setTimeout(() => {
-      speakVietnamese(speechText);
-    }, 400);
+    const estimatedDuration = Math.max(6500, Math.ceil((speechText.length / 12) * 1000) + 2000);
+    const maxDuration = Math.max(alert.durationMs || 6000, estimatedDuration);
 
-    // 4. Lên lịch biến mất
-    const duration = alert.durationMs || 6000;
-    setTimeout(() => {
+    let dismissed = false;
+    const dismissAlert = () => {
+      if (dismissed) return;
+      dismissed = true;
       setAnimState('OUT');
       // Chờ animation out hoàn tất (600ms)
       setTimeout(() => {
@@ -93,7 +93,21 @@ export default function OverlayPage() {
         // Kiểm tra alert tiếp theo trong queue
         processNextAlert();
       }, 600);
-    }, duration);
+    };
+
+    const safetyTimeout: NodeJS.Timeout | null = setTimeout(() => {
+      dismissAlert();
+    }, maxDuration);
+
+    setTimeout(() => {
+      speakVietnamese(speechText, () => {
+        // Khi Chị Google đọc xong câu dài/ngắn, chờ 1.2s cho người xem đọc rồi mới ẩn
+        if (safetyTimeout) clearTimeout(safetyTimeout);
+        setTimeout(() => {
+          dismissAlert();
+        }, 1200);
+      });
+    }, 400);
   };
 
   // Kết nối WebSocket Realtime

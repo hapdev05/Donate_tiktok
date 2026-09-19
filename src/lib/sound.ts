@@ -68,12 +68,18 @@ export function playAlertChime(volume = 0.8) {
  */
 let currentAudio: HTMLAudioElement | null = null;
 
-export function speakVietnamese(text: string) {
-  if (!text || typeof window === 'undefined') return;
+export function speakVietnamese(text: string, onEnded?: () => void) {
+  if (!text || typeof window === 'undefined') {
+    onEnded?.();
+    return;
+  }
 
   try {
     const cleanText = text.trim();
-    if (!cleanText) return;
+    if (!cleanText) {
+      onEnded?.();
+      return;
+    }
 
     // Dừng âm thanh trước nếu đang đọc
     if (currentAudio) {
@@ -88,10 +94,25 @@ export function speakVietnamese(text: string) {
     audio.volume = 1.0;
     currentAudio = audio;
 
+    let hasEnded = false;
+    const triggerEnd = () => {
+      if (!hasEnded) {
+        hasEnded = true;
+        onEnded?.();
+      }
+    };
+
+    audio.onended = triggerEnd;
+    audio.onerror = () => {
+      triggerEnd();
+    };
+
     audio.play().catch((err) => {
       console.warn('Không thể tự động phát giọng đọc (có thể do trình duyệt yêu cầu click chuột trước):', err);
+      triggerEnd();
     });
   } catch (e) {
     console.error('Lỗi khi phát giọng đọc tiếng Việt:', e);
+    onEnded?.();
   }
 }
