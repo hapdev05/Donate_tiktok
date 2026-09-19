@@ -89,7 +89,7 @@ export default function DashboardPage() {
             <span className="text-xs font-bold uppercase tracking-wider text-emerald-400">Streamer Dashboard</span>
           </div>
           <h1 className="text-2xl md:text-3xl font-black text-white mt-1">
-            {streamer?.displayName || 'Anh Phi Streamer'}
+            {streamer?.displayName || 'Hoàng Anh Phi'}
           </h1>
         </div>
 
